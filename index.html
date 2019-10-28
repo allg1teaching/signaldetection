@@ -1,0 +1,231 @@
+<!DOCTYPE html5>
+<html lang="en">
+<meta charset="utf-8"/>
+<html>
+    <head>
+        <title>Signal Detection Experiment</title>
+        <script src="jspsych/jspsych.js"></script>
+        <script src="jspsych/plugins/allg1-sdt.js"></script>
+        <script src="jspsych/plugins/jspsych-html-keyboard-response.js"></script>
+        <script src="jspsych/plugins/jspsych-instructions.js"></script>
+        <script src="jspsych/plugins/jspsych-fullscreen.js"></script>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link href="jspsych/css/jspsych.css" rel="stylesheet" type="text/css">
+    
+    </head>
+    <body></body>
+    <script>
+
+
+    // TO DO:
+    // intro slides
+    // data!
+
+    // ################### initialize vars ######################
+
+    var trials = []
+
+
+    // ##################### parameters #########################
+
+    // shared parameters for all trials
+    var type_param = "allg1-sdt";
+    var key_choices_param = [65, 76];  // a(65)-> no signal, l(76)-> signal
+    var dot_radius_param = 1;
+    var key_signal_not_detected = String.fromCharCode(key_choices_param[0]);
+    var key_signal_detected = String.fromCharCode(key_choices_param[1]);
+
+
+    var instr = [
+        // background
+        "<h1>Signal detection task</h1>" +
+        "<b>Background (1/6)</b><br><br>" +
+        "Much of cognitive psychology involves gathering data from experimental participants. Gathering good data is not always easy, especially when one uses a variety of people as participants. Researchers often must carefully design an experiment to be certain that participants are following the instructions and are motivated to try their best. Even despite these efforts, experimental results can be contaminated by individual differences if the researcher does not properly analyze the data."+
+        "<br><br>Press the right arrow key to proceed",
+        "<b>Background (2/6)</b><br><br>" +
+        "For example, consider two participants in visual detection of a faint target. The researcher wants to explore a property of the visual system, so he/she presents a visual stimulus and asks the participants to report whether they saw the target. After 50 trials, participant A reports seeing the target 25 times and participant B reports detection 17 times. Did participant A do better? Not necessarily, perhaps participant A is simply more prone to report seeing the target and participant B is more conservative. That is, the two participants may have equivalent visual systems, but differences in reporting. Reports of simple detection do not allow the researcher to compare participants' results." +
+        "<br><br><b>[>]</b>",
+        "<b>Background (3/6)</b><br><br>" +
+        "A better experiment is a modification of the one above. Have two kinds of trials, one with the target present and one with the target absent. Again have subjects report whether they saw the target. There are four statistics to be calculated from this experiment. Trials in which a participant correctly detects the target are called hits. The trials in which the target was there but participants did not detect it are called misses. If a participant reports seeing the target when it was not actually there, he/she has made a mistake (false alarm). A trial in which the participant correctly reports that the target was not present is a correct rejection. " +
+        "<br><br><b>[>]</b>",
+        "<b>Background (4/6)</b><br><br>" +
+        "Suppose that after 100 trials (50 for target present and 50 for target absent) the researcher again finds that on the trials in which the target was in fact present, participant A reports seeing it 25 times and participant B 17 times. Who is doing better? It depends on the frequency of false alarms. If participant A has 25 false alarms and participant B has 5 false alarms, then B is better than A at distinguishing the trials in which the target is present from the trials in which the target is absent. That is, in this case, A seems to often guess that the target is there, but he/she is wrong (false alarm) as often as right (hit). B is more selective about saying he/she detects the target, but rarely says the target is there when it is not. Thus, B is doing better." +
+        "<br><br><b>[>]</b>",
+        "<b>Background (5/6)</b><br><br>" +
+        "This type of analysis suggests that you need to consider two numbers, hits and false alarms to really be able to compare performance across subjects. Fortunately, you can combine the numbers in a careful way to produce a single number that gives an indication of the sensitivity of the participant to the presence of the target. The calculation is structured so that, with certain assumptions, it will not matter whether a participant takes a conservative or liberal approach to claiming to detect the target. There are several measures of sensitivity, the most commonly used one being d' (d-prime), which is based on signal detection theory." +
+        "<br><br><b>[>]</b>",
+        "<b>Background (6/6)</b><br><br>" +
+        "A discussion of the algorithms for calculating sensitivity is beyond the scope of this experiment [see Macmillan & Creelman, (1991) for further discussion]. Instead, you will participate in an experiment that measures sensitivity." +
+        "<br><br><b>[>]</b>",
+        // instructions
+        "<b>Instructions (1/3)</b><br><br>" +
+        "A group of randomly placed dots (sort of like a \"star field\") will appear. The number of random dots varies from trial to trial. Also, on some trials (target present) an additional set of ten dots arranged in a straight line that slants downward from left to right is randomly placed among the dot field. On the other trials (target absent), the line is not included. Your task is to report whether the target is present or absent." +
+        "<br><br>Press the right arrow key to proceed",
+        "<b>Instructions (2/3)</b><br><br>" +
+        "If you think the target is present, press the <b>A</b> key. If you think the target is not present, press the <b>L</b> key. You will be given feedback on whether you were correct. In addition, on the trials in which the target was actually present, a green line will connect the target dots after you make your decision. Look for the dots along this line so you will learn what the target looks like but the target will be randomly placed on the screen from trial to trial. There are a total of 60 trials, twenty trials for each number of random dots. Half of the trials have the target present, while the target is absent on the other half of the trials." +
+        "<br><br>Press the right arrow key to proceed",
+        "<b>Instructions (3/3)</b><br><br>" +
+        "After you've completed the experiment you can view your results and download your data in text (CSV) format." +
+        "<br><br>Press the right arrow key to proceed"
+    ]
+
+
+    // set these to adjust # of trials w/ and w/o signal per amount of dots
+
+    // original:
+    //var n_trials_no_signal = 13;
+    //var n_trials_signal = 7;
+
+    // debugging:
+    var n_trials_no_signal = 5;
+    var n_trials_signal = 5;
+
+    // set the sleep interval (ms) between trials
+
+    // original:
+    //var time_between_trials = 2000;
+
+    // debugging:
+    var time_between_trials = 500;
+
+    // set the different dot factors
+    var noise_factors = {144: "easy", 400: "medium", 900: "hard"};
+    // noise_factors_nums stores the different amount of dots per noise factor as specified in noise_factors
+    var noise_factors_nums = Object.keys(noise_factors).map(function(n) { return parseInt(n); } )
+
+
+    // ################### generate trials ######################
+
+    // trial factors with no signal are prepared (# of these trials is specified in n_trials_no_signal)
+    var factors_no_signal = {
+        n_dots_param: noise_factors_nums,
+        contains_signal_param: [false]
+    }
+    var trial_factors_no_signal = jsPsych.randomization.factorial(factors_no_signal, n_trials_no_signal);
+
+    // trial factors with a signal are prepared (# of these trials is specified in n_trials_signal)
+    var factors_signal = {
+        n_dots_param: noise_factors_nums,
+        contains_signal_param: [true]
+    }
+    var trial_factors_signal = jsPsych.randomization.factorial(factors_signal, n_trials_signal);
+
+    // concatenate the arrays of trial factors with/without a signal
+    var trial_factors = trial_factors_no_signal.concat(trial_factors_signal);
+
+    // all actual trial objects will be stored in the trials array
+    var trials = [];
+
+    // trials with factors stored in trial_factors are generated
+    for (i=0; i<trial_factors.length; i++) {
+        trials.push(sdt_trial = {
+            type: type_param,  // SDT
+            dot_radius: dot_radius_param,  // default: 1px radius
+            key_choices: key_choices_param,  // user input options; default: a, s
+            n_dots: trial_factors[i].n_dots_param,  // amount of dots, specified in current trial_factors object
+            contains_signal: trial_factors[i].contains_signal_param,
+            data: {
+                // data that is handed over to the trial to be returned on finish of this trial.
+                n_dots: trial_factors[i].n_dots_param,   // amount of dots
+                noise: noise_factors[trial_factors[i].n_dots_param],  // noise factor (more readable than n_dots)
+                contains_signal: trial_factors[i].contains_signal_param  //
+            }
+        })
+    }
+
+    // shuffle all trials
+    trials = jsPsych.randomization.repeat(trials, 1);
+
+    // TODO: add intro/outro slides
+
+    trials.unshift( intro3 = {
+        type: "instructions",
+        pages: instr
+    });
+
+
+    // ################### start experiment #####################
+
+    jsPsych.init({
+        timeline: trials,
+        show_progress_bar: true,
+        on_trial_start: function(){
+            jsPsych.pauseExperiment();
+        },
+        on_trial_finish: function(){  // timeout of <time_between_trials> ms between trials
+            setTimeout(jsPsych.resumeExperiment, time_between_trials);
+        },
+        on_finish: function(){  // on experiment finish (all trials have been finished)
+            console.log(collectData());
+            // output (on console) the data processed by collectData()
+            // this object is storing
+        }
+    });
+
+    // ##################### prepare data ########################
+
+    function collectData(){
+        var formatted_data = {};
+        var factor, noiseInt, noiseDescription;
+
+        // calculate results and pack them in an object
+        for (factor in Object.keys(noise_factors)){
+
+            // set working variables
+            noiseInt = Object.keys(noise_factors)[factor];
+            noiseDescription = noise_factors[noiseInt];
+
+            formatted_data["n_dots_" + noiseInt] = {
+                noise: noiseDescription,
+                noise_dotcount: noiseInt,
+                hit: jsPsych.data.get().filter({
+                        trial_type: type_param,
+                        n_dots: noiseInt,
+                        contains_signal: true,
+                        result: true}).count(),  // count # of data points fitting this filter; store as # of hits
+                miss: jsPsych.data.get().filter({
+                        trial_type: type_param,
+                        n_dots: noiseInt,
+                        contains_signal: true,
+                        result: false}).count(), // # of misses
+                false_alarm: jsPsych.data.get().filter({
+                        trial_type: type_param,
+                        n_dots: noiseInt,
+                        contains_signal: false,
+                        result: false}).count(), // # of false alarms
+                correct_rejection: jsPsych.data.get().filter({
+                        trial_type: type_param,
+                        n_dots: noiseInt,
+                        contains_signal: false,
+                        result: true}).count(), // # of correct rejections
+                true_positive_rate:  // TPR = (#positives correctly classified)/(# positives)
+                        jsPsych.data.get().filter({
+                            trial_type: type_param,
+                            n_dots: noiseInt,
+                            contains_signal: true,
+                            result: true}).count()
+                        /
+                        jsPsych.data.get().filter({
+                            trial_type: type_param,
+                            n_dots: noiseInt,
+                            contains_signal: true}).count(),
+                false_negative_rate:  // FPR = (#negatives incorrectly classified)/(# negatives)
+                        jsPsych.data.get().filter({
+                            trial_type: type_param,
+                            n_dots: noiseInt,
+                            contains_signal: false,
+                            result: false}).count()
+                        /
+                        jsPsych.data.get().filter({
+                            trial_type: type_param,
+                            n_dots: noiseInt,
+                            contains_signal: false}).count()
+            }
+        }
+
+        return formatted_data;
+    }
+
+
+    </script>
+</html>
