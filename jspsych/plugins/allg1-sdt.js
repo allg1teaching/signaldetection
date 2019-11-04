@@ -59,6 +59,11 @@ jsPsych.plugins["allg1-sdt"] = (function() {
                 pretty_name: "DEBUG: Custom radius for signal dots",
                 default: false,
                 description: "DEBUG: Enable custom radius for signal dots, as specified in dot_radius_signal"
+            },
+
+            is_practice: {
+                type: jsPsych.plugins.parameterType.INT,
+                default: 0
             }
         }
     }
@@ -110,7 +115,6 @@ jsPsych.plugins["allg1-sdt"] = (function() {
         // set body settings
         body.style.margin = 0;
         body.style.padding = 0;
-        body.style.backgroundColor = background_colour;
 
         // canvas styling
         canvas.style.margin = 0;
@@ -131,6 +135,11 @@ jsPsych.plugins["allg1-sdt"] = (function() {
         var canvasWidth = canvas.width = 0.95*(window.innerWidth);
         var canvasHeight = canvas.height = 0.93*(window.innerHeight);
 
+        // signal x/y offset
+        var xOffset, yOffset;
+        xOffset = canvasWidth / 25 // 60;
+        yOffset = canvasHeight / 25 // 33;
+
         // FUNCTION CALLING/INITIALIZATION START
 
         if (contains_signal) {
@@ -147,8 +156,8 @@ jsPsych.plugins["allg1-sdt"] = (function() {
             but this workaround is not as bad as the max(s,5) approach
             */
 
-            var signalStartX = (Math.floor((Math.random()*canvasWidth))) % (canvasWidth - 600);
-            var signalStartY = (Math.floor((Math.random()*canvasHeight))) % (canvasHeight - 330);
+            var signalStartX = (Math.floor((Math.random()*canvasWidth))) % (canvasWidth - 11 * xOffset);
+            var signalStartY = (Math.floor((Math.random()*canvasHeight))) % (canvasHeight - 11 * yOffset);
 
             // 10 dot slots are reserved for the signal
             n_dots += -10;
@@ -156,6 +165,8 @@ jsPsych.plugins["allg1-sdt"] = (function() {
             drawSignal();
             // draw the 10 signal dots
         }
+
+        var trial_data = {};
 
         drawDotArray();  // draw dots on the screen
 
@@ -201,7 +212,6 @@ jsPsych.plugins["allg1-sdt"] = (function() {
 
         function drawDotArray(){
             var a = generateNDotArray();
-
             for  (var i = 0; i < n_dots; i++) {
                 // draw one dot at a time
 
@@ -219,9 +229,7 @@ jsPsych.plugins["allg1-sdt"] = (function() {
 
         function drawSignal(){
             // ~150 deg angle, 10 dots
-            var posX, posY, xOffset, yOffset;
-            xOffset = 60;
-            yOffset = 33;
+            var posX, posY;
             // this x/y offset creates a line of dots at a 150deg angle
 
             // keep the distance between dots fixed or scale with screen size?
@@ -263,18 +271,21 @@ jsPsych.plugins["allg1-sdt"] = (function() {
         function checkResponse(info){
            // handle keyboard event
 
+           trial_data["key"] = info.key;
+           trial_data["is_practice"] = trial.is_practice;
+
             if (contains_signal) {
 
                 // draw line along signal
                 ctx.beginPath();
-                ctx.moveTo(signalStartX-60,signalStartY-33);
-                ctx.lineTo(signalStartX+660,signalStartY+363);
+                ctx.moveTo(signalStartX-xOffset,signalStartY-yOffset);
+                ctx.lineTo(signalStartX+11*xOffset,signalStartY+11*yOffset);
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = "green";
                 ctx.stroke();
 
                 // check response
-                if (info.key == key_choices[1]) {
+                if (info.key == key_choices[0]) {
                     // key_choices[1] is the correct key when there is a signal
                     feedback(true);
                     // log result
@@ -286,7 +297,7 @@ jsPsych.plugins["allg1-sdt"] = (function() {
             }
             else {
                 // doesn't contain a signal
-                if (info.key == key_choices[0]) {
+                if (info.key == key_choices[1]) {
                     feedback(true);
                     // log result
                 }
@@ -313,17 +324,18 @@ jsPsych.plugins["allg1-sdt"] = (function() {
             end_trial(positive);
         }
 
-        function end_trial(result){
+        function end_trial(correct_response){
             // return data and end trial
 
             jsPsych.pluginAPI.cancelKeyboardResponse(keyListener);
 
-            var trial_data = {
-                "result": result
+            trial_data["correct_response"] = correct_response;
                 // the rest of the trial data is handed over to the trial at creation
-            }
 
-            jsPsych.finishTrial(trial_data);
+            jsPsych.pluginAPI.setTimeout(() => {
+                display_element.removeChild(canvas);
+                jsPsych.finishTrial(trial_data);    
+            }, 500);
         }
 
     }; // END OF TRIAL

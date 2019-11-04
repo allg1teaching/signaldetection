@@ -6,9 +6,12 @@
         <title>Signal Detection Experiment</title>
         <script src="jspsych/jspsych.js"></script>
         <script src="jspsych/plugins/allg1-sdt.js"></script>
+        <script src="jspsych/plugins/allg1-sdtres.js"></script>
+        <script src="jspsych/plugins/jspsych-survey-text.js"></script>
         <script src="jspsych/plugins/jspsych-html-keyboard-response.js"></script>
         <script src="jspsych/plugins/jspsych-instructions.js"></script>
         <script src="jspsych/plugins/jspsych-fullscreen.js"></script>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <link href="jspsych/css/jspsych.css" rel="stylesheet" type="text/css">
     
@@ -18,13 +21,11 @@
 
 
     // TO DO:
-    // intro slides
     // data!
 
     // ################### initialize vars ######################
 
-    var trials = []
-
+    var trials = [];
 
     // ##################### parameters #########################
 
@@ -35,6 +36,23 @@
     var key_signal_not_detected = String.fromCharCode(key_choices_param[0]);
     var key_signal_detected = String.fromCharCode(key_choices_param[1]);
 
+    var downloadData = function() {
+        // get subject initials
+        var initials = JSON.parse(jsPsych.data.get().filter({trial_type: 'survey-text'}).values()[0].responses).Q0;
+        // append UNIX timestamp (to reduce probability of name collisions)
+        var timestamp = Date.now();
+        var filename = initials+timestamp+".csv";
+        var text = jsPsych.data.get().filter({trial_type: 'allg1-sdt'}).csv();2
+
+        // creates downloadable file containing text arg with name filename on client-side and prompts download
+        var fileDL = document.createElement('a');
+        fileDL.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        fileDL.setAttribute('download', filename);
+        fileDL.style.display = 'none';
+        document.body.appendChild(fileDL);
+        fileDL.click();
+        document.body.removeChild(fileDL);
+    }
 
     var instr = [
         // background
@@ -59,14 +77,14 @@
         "<br><br><b>[>]</b>",
         // instructions
         "<b>Instructions (1/3)</b><br><br>" +
-        "A group of randomly placed dots (sort of like a \"star field\") will appear. The number of random dots varies from trial to trial. Also, on some trials (target present) an additional set of ten dots arranged in a straight line that slants downward from left to right is randomly placed among the dot field. On the other trials (target absent), the line is not included. Your task is to report whether the target is present or absent." +
-        "<br><br>Press the right arrow key to proceed",
+        "A group of randomly placed dots (sort of like a \"star field\") will appear. The number of random dots varies from trial to trial. Also, on some trials (target present) an additional set of ten dots arranged in a straight line that slants downward from left to right is randomly placed among the dot field. On the other trials (target absent), the line is not included. Your task is to report whether the target is present or absent. During practice trials, you will have the chance to practice this a couple of times before you start the main task." +
+        "<br><br><b>[>]</b>",
         "<b>Instructions (2/3)</b><br><br>" +
         "If you think the target is present, press the <b>A</b> key. If you think the target is not present, press the <b>L</b> key. You will be given feedback on whether you were correct. In addition, on the trials in which the target was actually present, a green line will connect the target dots after you make your decision. Look for the dots along this line so you will learn what the target looks like but the target will be randomly placed on the screen from trial to trial. There are a total of 60 trials, twenty trials for each number of random dots. Half of the trials have the target present, while the target is absent on the other half of the trials." +
-        "<br><br>Press the right arrow key to proceed",
+        "<br><br><b>[>]</b>",
         "<b>Instructions (3/3)</b><br><br>" +
-        "After you've completed the experiment you can view your results and download your data in text (CSV) format." +
-        "<br><br>Press the right arrow key to proceed"
+        "After you've completed the experiment you can view your results and download your data in text (CSV) format. You will start with a couple of practice trials to get accustomed to the task." +
+        "<br><br><b>[>]</b>"
     ]
 
 
@@ -77,8 +95,8 @@
     //var n_trials_signal = 7;
 
     // debugging:
-    var n_trials_no_signal = 5;
-    var n_trials_signal = 5;
+    var n_trials_no_signal = 17;
+    var n_trials_signal = 8;
 
     // set the sleep interval (ms) between trials
 
@@ -91,7 +109,7 @@
     // set the different dot factors
     var noise_factors = {144: "easy", 400: "medium", 900: "hard"};
     // noise_factors_nums stores the different amount of dots per noise factor as specified in noise_factors
-    var noise_factors_nums = Object.keys(noise_factors).map(function(n) { return parseInt(n); } )
+    var noise_factors_nums = Object.keys(noise_factors).map(function(n) { return parseInt(n); } );
 
 
     // ################### generate trials ######################
@@ -100,14 +118,14 @@
     var factors_no_signal = {
         n_dots_param: noise_factors_nums,
         contains_signal_param: [false]
-    }
+    };
     var trial_factors_no_signal = jsPsych.randomization.factorial(factors_no_signal, n_trials_no_signal);
 
     // trial factors with a signal are prepared (# of these trials is specified in n_trials_signal)
     var factors_signal = {
         n_dots_param: noise_factors_nums,
         contains_signal_param: [true]
-    }
+    };
     var trial_factors_signal = jsPsych.randomization.factorial(factors_signal, n_trials_signal);
 
     // concatenate the arrays of trial factors with/without a signal
@@ -115,6 +133,23 @@
 
     // all actual trial objects will be stored in the trials array
     var trials = [];
+    var timeline = [];
+    var practice = [];
+
+    timeline.push(
+        initials = {
+            type: 'survey-text',
+            questions: [{prompt: "Before you begin, please enter your initials"}]
+        }
+    );
+
+    // TODO: add intro/outro slides
+
+    timeline.push( intro = {
+        type: "instructions",
+        pages: instr
+    });
+
 
     // trials with factors stored in trial_factors are generated
     for (i=0; i<trial_factors.length; i++) {
@@ -131,100 +166,76 @@
                 contains_signal: trial_factors[i].contains_signal_param  //
             }
         })
+    };
+
+    for (var ndots=0; ndots<3; ndots++){
+        for (var signal=0; signal<2; signal++){
+            practice.push(
+                sdt_trial = {
+                    type: type_param,  // SDT
+                    dot_radius: dot_radius_param,  // default: 1px radius
+                    key_choices: key_choices_param,  // user input options; default: a, s
+                    n_dots: [144,400,900][ndots],  // amount of dots, specified in current trial_factors object
+                    contains_signal: [true,false][signal],
+                    is_practice: 1,
+                    data: {
+                        // data that is handed over to the trial to be returned on finish of this trial.
+                        n_dots: [144,400,900][ndots],   // amount of dots
+                        noise: noise_factors[[144,400,900][ndots]],  // noise factor (more readable than n_dots)
+                        contains_signal: [true,false][signal]  //
+                    }
+                }
+            );
+        }
     }
 
     // shuffle all trials
     trials = jsPsych.randomization.repeat(trials, 1);
+    practice = jsPsych.randomization.repeat(practice, 1);
 
-    // TODO: add intro/outro slides
-
-    trials.unshift( intro3 = {
+    practice.push( 
+        practice_finished = {
         type: "instructions",
-        pages: instr
-    });
+        pages: ["You have completed the practice trials.<br><br>Press the right arrow key to proceed to the main task.<br><br><b>[>]</b>"]
+        }
+    );
 
+    timeline = timeline.concat(practice);
+    timeline = timeline.concat(trials);
+
+    timeline.push(
+        finished = {
+            type: "instructions",
+            pages: ["You have completed the task. On the following page you'll have a chance to see your results.<br><br><b>[>]</b>"]
+        }
+    )
+
+    timeline.push(
+        results = {
+            type: "allg1-sdtres"
+        }
+    )
+
+    timeline.push(
+        afterres = {
+            type: "instructions",
+            pages: ["Thank you for participating! You can close the window now."]
+        }
+    )
 
     // ################### start experiment #####################
 
     jsPsych.init({
-        timeline: trials,
+        timeline: timeline,
         show_progress_bar: true,
-        on_trial_start: function(){
-            jsPsych.pauseExperiment();
-        },
-        on_trial_finish: function(){  // timeout of <time_between_trials> ms between trials
-            setTimeout(jsPsych.resumeExperiment, time_between_trials);
-        },
         on_finish: function(){  // on experiment finish (all trials have been finished)
-            console.log(collectData());
+            // console.log(collectData());
             // output (on console) the data processed by collectData()
             // this object is storing
         }
     });
 
     // ##################### prepare data ########################
-
-    function collectData(){
-        var formatted_data = {};
-        var factor, noiseInt, noiseDescription;
-
-        // calculate results and pack them in an object
-        for (factor in Object.keys(noise_factors)){
-
-            // set working variables
-            noiseInt = Object.keys(noise_factors)[factor];
-            noiseDescription = noise_factors[noiseInt];
-
-            formatted_data["n_dots_" + noiseInt] = {
-                noise: noiseDescription,
-                noise_dotcount: noiseInt,
-                hit: jsPsych.data.get().filter({
-                        trial_type: type_param,
-                        n_dots: noiseInt,
-                        contains_signal: true,
-                        result: true}).count(),  // count # of data points fitting this filter; store as # of hits
-                miss: jsPsych.data.get().filter({
-                        trial_type: type_param,
-                        n_dots: noiseInt,
-                        contains_signal: true,
-                        result: false}).count(), // # of misses
-                false_alarm: jsPsych.data.get().filter({
-                        trial_type: type_param,
-                        n_dots: noiseInt,
-                        contains_signal: false,
-                        result: false}).count(), // # of false alarms
-                correct_rejection: jsPsych.data.get().filter({
-                        trial_type: type_param,
-                        n_dots: noiseInt,
-                        contains_signal: false,
-                        result: true}).count(), // # of correct rejections
-                true_positive_rate:  // TPR = (#positives correctly classified)/(# positives)
-                        jsPsych.data.get().filter({
-                            trial_type: type_param,
-                            n_dots: noiseInt,
-                            contains_signal: true,
-                            result: true}).count()
-                        /
-                        jsPsych.data.get().filter({
-                            trial_type: type_param,
-                            n_dots: noiseInt,
-                            contains_signal: true}).count(),
-                false_negative_rate:  // FPR = (#negatives incorrectly classified)/(# negatives)
-                        jsPsych.data.get().filter({
-                            trial_type: type_param,
-                            n_dots: noiseInt,
-                            contains_signal: false,
-                            result: false}).count()
-                        /
-                        jsPsych.data.get().filter({
-                            trial_type: type_param,
-                            n_dots: noiseInt,
-                            contains_signal: false}).count()
-            }
-        }
-
-        return formatted_data;
-    }
 
 
     </script>
