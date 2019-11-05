@@ -62,7 +62,7 @@ jsPsych.plugins["allg1-sdtres"] = (function () {
             contains_signal: false,
             correct_response: true
           }).count(), // # of correct rejections
-          true_positive_rate:  // TPR = (#positives correctly classified)/(# positives)
+          hit_rate:  // hit rate = TPR = (#positives correctly classified)/(# positives)
             jsPsych.data.get().filter({
               trial_type: type_param,
               is_practice: 0,
@@ -77,7 +77,7 @@ jsPsych.plugins["allg1-sdtres"] = (function () {
               n_dots: noiseInt,
               contains_signal: true
             }).count(),
-          false_negative_rate:  // FPR = (#negatives incorrectly classified)/(# negatives)
+          false_alarm_rate:  // false alarm rate = FPR = (#negatives incorrectly classified)/(# negatives)
             jsPsych.data.get().filter({
               trial_type: type_param,
               is_practice: 0,
@@ -107,24 +107,24 @@ jsPsych.plugins["allg1-sdtres"] = (function () {
     display_element.appendChild(plotDiv);
 
     dat1 = {
-      x: [formatted_data["n_dots_144"].false_negative_rate],
-      y: [formatted_data["n_dots_144"].true_positive_rate],
+      x: [formatted_data["n_dots_144"].false_alarm_rate],
+      y: [formatted_data["n_dots_144"].hit_rate],
       mode: 'markers',
       type: 'scatter',
       name: '144 dots',    
       marker: {size: 9}
     }
     dat2 = {
-      x: [formatted_data["n_dots_400"].false_negative_rate],
-      y: [formatted_data["n_dots_400"].true_positive_rate],
+      x: [formatted_data["n_dots_400"].false_alarm_rate],
+      y: [formatted_data["n_dots_400"].hit_rate],
       mode: 'markers',
       type: 'scatter',
       name: '400 dots',    
       marker: {size: 9}
     }
     dat3 = {
-      x: [formatted_data["n_dots_900"].false_negative_rate],
-      y: [formatted_data["n_dots_900"].true_positive_rate],
+      x: [formatted_data["n_dots_900"].false_alarm_rate],
+      y: [formatted_data["n_dots_900"].hit_rate],
       mode: 'markers',
       type: 'scatter',
       name: '900 dots',    
@@ -142,11 +142,11 @@ jsPsych.plugins["allg1-sdtres"] = (function () {
         margin: { t: 100 },
         title: 'ROC',
         yaxis: {
-          title: 'true positive rate',
+          title: 'Hit rate',
           range: [-0.1,1.1]
         },
         xaxis: {
-          title: 'false negative rate',
+          title: 'False Alarm rate',
           range: [-0.1,1.1]
         }
       });
